@@ -21,19 +21,25 @@ const secret = Math.floor(Math.random() * 100) + 1;
 console.log('Number Guessing Game');
 console.log('I am thinking of a number from 1 to 100.');
 
+let attempts = 0;
+
 while (true) {
-  const answer = await ask('Your guess: ');
+  const answer = await ask(`Guess #${attempts + 1}: `);
   if (answer === null) break;
 
   const guess = Number(answer);
   if (answer === '' || !Number.isInteger(guess)) {
     console.log('Please type a whole number.');
-  } else if (guess < secret) {
+    continue;
+  }
+
+  attempts += 1;
+  if (guess < secret) {
     console.log('Too low.');
   } else if (guess > secret) {
     console.log('Too high.');
   } else {
-    console.log('Correct!');
+    console.log(`Correct! You found it in ${attempts} ${attempts === 1 ? 'attempt' : 'attempts'}.`);
     break;
   }
 }
