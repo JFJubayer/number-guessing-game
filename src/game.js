@@ -1,5 +1,8 @@
 import readline from 'node:readline';
 
+const MIN = 1;
+const MAX = 100;
+
 const rl = readline.createInterface({ input: process.stdin });
 const lines = rl[Symbol.asyncIterator]();
 
@@ -17,31 +20,60 @@ async function ask(question) {
   return answer;
 }
 
-const secret = Math.floor(Math.random() * 100) + 1;
-console.log('Number Guessing Game');
-console.log('I am thinking of a number from 1 to 100.');
+function hintFor(guess, secret) {
+  const direction = guess < secret ? 'low' : 'high';
+  const distance = Math.abs(guess - secret);
+  if (distance <= 3) return `Too ${direction}, but very close!`;
+  if (distance <= 10) return `Too ${direction}, but close.`;
+  return `Too ${direction}, and far away.`;
+}
 
-let attempts = 0;
+// 100 points for a win on the first try, 10 less for every extra attempt, never below 10.
+function scoreFor(attempts) {
+  return Math.max(10, 110 - attempts * 10);
+}
 
-while (true) {
-  const answer = await ask(`Guess #${attempts + 1}: `);
-  if (answer === null) break;
+// Plays one round. Returns { attempts, score }, or null when the input has ended.
+async function playRound() {
+  const secret = Math.floor(Math.random() * (MAX - MIN + 1)) + MIN;
+  console.log(`I am thinking of a number from ${MIN} to ${MAX}.`);
+  let attempts = 0;
 
-  const guess = Number(answer);
-  if (answer === '' || !Number.isInteger(guess)) {
-    console.log('Please type a whole number.');
-    continue;
-  }
+  while (true) {
+    const answer = await ask(`Guess #${attempts + 1}: `);
+    if (answer === null) return null;
 
-  attempts += 1;
-  if (guess < secret) {
-    console.log('Too low.');
-  } else if (guess > secret) {
-    console.log('Too high.');
-  } else {
-    console.log(`Correct! You found it in ${attempts} ${attempts === 1 ? 'attempt' : 'attempts'}.`);
-    break;
+    const guess = Number(answer);
+    if (answer === '' || !Number.isInteger(guess)) {
+      console.log('Please type a whole number.');
+      continue;
+    }
+
+    attempts += 1;
+    if (guess === secret) {
+      const score = scoreFor(attempts);
+      console.log(`Correct! You found it in ${attempts} ${attempts === 1 ? 'attempt' : 'attempts'}. Score: ${score}`);
+      return { attempts, score };
+    }
+    console.log(hintFor(guess, secret));
   }
 }
 
+console.log('Number Guessing Game');
+let rounds = 0;
+let total = 0;
+
+while (true) {
+  const result = await playRound();
+  if (result === null) break;
+
+  rounds += 1;
+  total += result.score;
+  console.log(`Total score: ${total} after ${rounds} ${rounds === 1 ? 'round' : 'rounds'}.`);
+
+  const again = await ask('Play again? (y/n): ');
+  if (again === null || !/^y(es)?$/i.test(again)) break;
+}
+
+console.log(rounds === 0 ? 'Bye!' : `Thanks for playing! Final score: ${total}.`);
 rl.close();
